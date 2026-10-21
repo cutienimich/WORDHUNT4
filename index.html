@@ -45,6 +45,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:4px solid 
 .hostbadge{display:inline-block;background:var(--gr);color:#fff;border-radius:999px;padding:2px 14px;font-weight:700;font-size:14px;margin-top:4px}
 .note,.tag,.err{background:#f8e8c2d9;border-radius:12px;padding:4px 14px;display:inline-block}
 .err:empty{display:none}
+.kick{margin-top:8px;font-size:13px!important;padding:3px 12px!important}
 .hbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-start;min-height:44px}
 .tsel{background:#f8e8c2d9;border-radius:12px;padding:4px 10px;font-size:15px;font-weight:700}
 .tsel select{font:inherit;padding:2px 8px;border-radius:10px;border:3px solid var(--edge);background:var(--parch);color:var(--ink)}
@@ -63,7 +64,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:4px solid 
 <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import{getDatabase,ref,onValue,set,update,get,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+import{getDatabase,ref,onValue,set,update,get,runTransaction,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
 /* ===== SETUP: paste your Firebase config here ===== */
 const FIREBASE_CONFIG={
@@ -93,6 +94,9 @@ const app=document.getElementById('app'),$=s=>document.querySelector(s);
 const ls=(k,v)=>{try{if(v===undefined)return localStorage.getItem(k);if(v===null)localStorage.removeItem(k);else localStorage.setItem(k,v)}catch(e){}return null};
 if(FIREBASE_CONFIG.apiKey.startsWith('PASTE')){app.innerHTML='<h1>Word Hunt</h1><p class="err">Setup needed: paste your Firebase config at the top of index.html.</p>';throw new Error('no config')}
 const db=getDatabase(initializeApp(FIREBASE_CONFIG));
+const DID=ls('wh_id')||(()=>{const v=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);ls('wh_id',v);return v})();
+const FREE={joined:false,count:0,words:[],lastAt:0};
+let gLoaded=false,kickArm=0;
 let off=0,game={status:'lobby',epoch:0},groups={},me=+ls('wh_g')||null,mine=[],lastT=0,epoch=null,hostView=false,ph='',shownKey='',wipe=false,dur=300,err='';
 try{mine=JSON.parse(ls('wh_w')||'[]')}catch(e){mine=[]}
 lastT=+ls('wh_t')||0;epoch=ls('wh_e')==null?null:+ls('wh_e');
@@ -102,12 +106,18 @@ const fmt=ms=>{ms=Math.max(0,Math.ceil(ms/1000));return Math.floor(ms/60)+':'+St
 const left=()=>game.status==='running'?game.startAt+game.dur-now():0;
 function phase(){if(game.status!=='running'||!game.startAt)return'lobby';if(left()<=0)return'ended';if(Object.values(groups).some(x=>x&&x.count>=TOTAL))return'ended';return'run'}
 function rank(){return Object.entries(groups).filter(([,v])=>v&&v.joined).map(([k,v])=>({g:+k.slice(1),n:v.count||0,t:v.lastAt||9e15})).sort((a,b)=>b.n-a.n||a.t-b.t)}
-function pub(){ls('wh_w',JSON.stringify(mine));ls('wh_t',String(lastT));if(me)update(ref(db,'groups/g'+me),{joined:true,count:mine.length,words:mine,lastAt:lastT}).catch(()=>{})}
+function pub(){ls('wh_w',JSON.stringify(mine));ls('wh_t',String(lastT));if(!me)return;
+  runTransaction(ref(db,'groups/g'+me),cur=>{
+    if(!cur)return{joined:true,owner:DID,count:mine.length,words:mine,lastAt:lastT};
+    if(cur.owner!==DID)return;
+    cur.count=mine.length;cur.words=mine;cur.lastAt=lastT;return cur}).catch(()=>{})}
+function forget(msg){me=null;mine=[];lastT=0;ls('wh_g',null);ls('wh_w',null);ls('wh_t',null);err=msg||'';shownKey=''}
+function chkMe(){if(!me||!gLoaded||hostView)return;const g=groups['g'+me];if(!g||!g.joined||g.owner!==DID)forget('You were removed from Group '+me+'. Join again.')}
 function chkEpoch(){const e=game.epoch||0;if(e===epoch)return;if(epoch!==null){mine=[];lastT=0;ls('wh_w',null)}epoch=e;ls('wh_e',String(e));if(me)pub()}
 
 onValue(ref(db,'.info/serverTimeOffset'),s=>{off=s.val()||0});
 onValue(ref(db,'game'),s=>{game=s.val()||{status:'lobby',epoch:0};if(!hostView)chkEpoch();sync()},()=>fail());
-onValue(ref(db,'groups'),s=>{groups=s.val()||{};sync()},()=>fail());
+onValue(ref(db,'groups'),s=>{groups=s.val()||{};gLoaded=true;chkMe();sync()},()=>fail());
 function fail(){app.innerHTML='<h1>Word Hunt</h1><p class="err">Cannot reach the game server. Check internet and Firebase rules.</p>'}
 setInterval(sync,1000);
 
@@ -135,14 +145,27 @@ function renderJoin(){
   <p style="margin-top:44px"><input class="inp pill" id="gn" inputmode="numeric" maxlength="1" placeholder="Enter your Group Number" aria-label="Group number"></p>
   <p style="margin-top:30px"><button class="btn go" id="sv">🧭 Save</button></p><p class="err" id="er">${err}</p>
   <p>The game will start once the Host starts.</p><p class="note">Group numbers 1 to 6.</p>`;
-  $('#sv').onclick=async()=>{const n=+$('#gn').value;if(!(n>=1&&n<=6)){$('#er').textContent='Enter a number from 1 to 6.';return}
-    if(ls('wh_g')!==String(n)){mine=[];lastT=0}
-    if(!mine.length){try{const s=await get(ref(db,'groups/g'+n)),d=s.val();if(d&&d.words&&epoch===(game.epoch||0)){mine=d.words;lastT=d.lastAt||0}}catch(e){}}
-    me=n;err='';ls('wh_g',String(n));epoch=game.epoch||0;ls('wh_e',String(epoch));pub();shownKey='';sync()};
+  $('#sv').onclick=async()=>{const n=+$('#gn').value,er=$('#er');if(!(n>=1&&n<=6)){er.textContent='Enter a number from 1 to 6.';return}
+    const g=groups['g'+n];
+    if(game.status!=='lobby'&&!(g&&g.owner===DID)){er.textContent='Game already started. You can’t join now.';return}
+    if(g&&g.joined&&g.owner&&g.owner!==DID){er.textContent='Group '+n+' is already taken. Pick another group.';return}
+    er.textContent='Joining…';
+    try{
+      const r=await runTransaction(ref(db,'groups/g'+n),cur=>{
+        if(cur&&cur.joined&&cur.owner&&cur.owner!==DID)return;
+        if(cur&&cur.joined&&cur.owner===DID)return cur;
+        return{joined:true,owner:DID,count:0,words:[],lastAt:0}});
+      if(!r.committed){er.textContent='Group '+n+' is already taken. Pick another group.';return}
+      const d=r.snapshot.val()||{},sw=d.words||[];
+      if(!(ls('wh_g')===String(n)&&mine.length>sw.length)){mine=sw;lastT=d.lastAt||0}
+      me=n;err='';ls('wh_g',String(n));epoch=game.epoch||0;ls('wh_e',String(epoch));pub();shownKey='';sync();
+    }catch(e){er.textContent='Could not join. Check internet and try again.'}};
 }
 function renderPlay(){
-  const head=`<div class="top"><button class="btn sm" id="ch">🧭 Change group</button><span class="tm sign" id="tm"></span><span></span></div><h2 class="sign">Group ${me}</h2>`;
-  const bindCh=()=>{$('#ch').onclick=()=>{me=null;ls('wh_g',null);shownKey='';sync()}};
+  const head=`<div class="top">${ph==='lobby'?'<button class="btn sm" id="ch">🧭 Change group</button>':'<span></span>'}<span class="tm sign" id="tm"></span><span></span></div><h2 class="sign">Group ${me}</h2>`;
+  const bindCh=()=>{const c=$('#ch');if(!c)return;c.onclick=async()=>{const n=me;c.disabled=true;
+    try{await runTransaction(ref(db,'groups/g'+n),cur=>{if(!cur||cur.owner!==DID)return;return{...FREE}})}catch(e){}
+    forget('');sync()}};
   if(ph==='lobby'){app.innerHTML=head+`<h1 class="sign big">Get ready</h1><p>You joined Group ${me}.</p><p>The game will start once the Host starts.</p>`;bindCh();return}
   if(ph==='ended'){const r=rank(),pos=r.findIndex(x=>x.g===me)+1;
     app.innerHTML=head+`<h1 class="sign big">Game over</h1><div class="card"><p><b style="font-size:28px">${mine.length}</b> of ${TOTAL} words found</p><p class="mu">Your rank: ${pos||'-'} of ${r.length}</p><div class="wl">${mine.map(w=>`<span>${w[0]+w.slice(1).toLowerCase()}</span>`).join('')}</div></div>`;bindCh();return}
@@ -179,8 +202,11 @@ function renderHost(){
     ${ended?'<h2 class="sign" id="wn"></h2>':''}
     <div class="boxes" id="bx"></div></div>
     ${lob?'<div class="hside"><div id="qr"></div><p>Scan to join the hunt</p></div>':''}</div>
-  <p class="note"></p>`;
+  <p class="note">Players scan the QR and enter their group number. First to ${TOTAL} words ends the game. Ties go to who found their last word first.</p>`;
   hostBoxes();
+  $('#bx').onclick=async e=>{const b=e.target.closest('.kick');if(!b)return;const i=+b.dataset.k;
+    if(kickArm!==i){kickArm=i;hostBoxes();setTimeout(()=>{if(kickArm===i){kickArm=0;hostBoxes()}},4000);return}
+    kickArm=0;try{await set(ref(db,'groups/g'+i),{...FREE})}catch(x){}hostBoxes()};
   const q=$('#qr');if(q&&window.qrcode){try{const c=qrcode(0,'M');c.addData(location.href.split('#')[0]);c.make();q.innerHTML=c.createSvgTag(6,0)}catch(e){}}
   const st=$('#st');if(st){$('#du').onchange=e=>dur=+e.target.value;
     st.onclick=()=>set(ref(db,'game'),{status:'running',startAt:serverTimestamp(),dur:dur*1000,epoch:game.epoch||0}).catch(()=>{})}
@@ -192,7 +218,8 @@ function hostBoxes(){
   const b=$('#bx');if(!b)return;const r=rank(),top=ph==='ended'&&r.length?r[0].g:0;
   b.innerHTML=[1,2,3,4,5,6].map(i=>{const g=groups['g'+i],j=g&&g.joined;
     const st=ph==='lobby'?(j?'<em class="chip on">✔ Joined</em>':'<em class="chip">Waiting</em>'):(j?`<div class="found">💰 Words Found: ${g.count||0}</div>`:'<em class="chip">Not joined</em>');
-    return`<div class="box ${top===i?'win':''}"><b>Group ${i}</b>${st}</div>`}).join('');
+    const kb=j?`<div><button class="btn sm kick" data-k="${i}">${kickArm===i?'Tap again to kick':'Kick'}</button></div>`:'';
+    return`<div class="box ${top===i?'win':''}"><b>Group ${i}</b>${st}${kb}</div>`}).join('');
   const w=$('#wn');if(w&&top)w.textContent='🏆 Winner: Group '+top+' with '+r[0].n+' words';
 }
 sync();
