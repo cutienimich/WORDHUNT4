@@ -40,25 +40,14 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--hl);outline-off
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getDatabase,ref,onValue,set,update,get,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-/* ===== SETUP: paste your Firebase config here ===== */
-const FIREBASE_CONFIG= {
-  apiKey: "AIzaSyDC6ICU9wbZZD6JxwW7fUwhSl7OSjTrwFg",
-  authDomain: "wordhunt-79a26.firebaseapp.com",
-  databaseURL: "https://wordhunt-79a26-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "wordhunt-79a26",
-  storageBucket: "wordhunt-79a26.firebasestorage.app",
-  messagingSenderId: "225475319753",
-  appId: "1:225475319753:web:d26baaee1c1354374cba18",
-  measurementId: "G-M0L70VSVG5"
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyDC6ICU9wbZZD6JxwW7fUwhSl7OSjTrwFg",
+  authDomain:"wordhunt-79a26.firebaseapp.com",
+  databaseURL:"https://wordhunt-79a26-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"wordhunt-79a26",
+  appId:"1:225475319753:web:d26baaee1c1354374cba18"
 };
-
-  // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const HOST_PIN="https://cutienimich.github.io/WORDHUNT4/";   /* change this. Host opens: your-site-url/#host */
+const HOST_PIN="4821";
 /* ================================================== */
 
 const WORDS=['ORGANIZING','ORGANIZATION','AUTHORITY','STRUCTURE','NETWORK','MATRIX','STORAGE','SECURITY','DISTRIBUTION','ACCURACY','COORDINATION','SPECIALIZATION','FUNCTIONAL','DIVISIONAL','INFORMATION'];
