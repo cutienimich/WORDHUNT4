@@ -40,6 +40,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--hl);outline-off
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getDatabase,ref,onValue,set,update,get,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+/* ===== SETUP: paste your Firebase config here ===== */
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyDC6ICU9wbZZD6JxwW7fUwhSl7OSjTrwFg",
   authDomain:"wordhunt-79a26.firebaseapp.com",
@@ -47,7 +49,7 @@ const FIREBASE_CONFIG={
   projectId:"wordhunt-79a26",
   appId:"1:225475319753:web:d26baaee1c1354374cba18"
 };
-const HOST_PIN="4821";
+const HOST_PIN="4821";   /* change this. Host opens: your-site-url/#host */
 /* ================================================== */
 
 const WORDS=['ORGANIZING','ORGANIZATION','AUTHORITY','STRUCTURE','NETWORK','MATRIX','STORAGE','SECURITY','DISTRIBUTION','ACCURACY','COORDINATION','SPECIALIZATION','FUNCTIONAL','DIVISIONAL','INFORMATION'];
