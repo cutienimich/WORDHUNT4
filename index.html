@@ -179,7 +179,7 @@ function renderHost(){
     ${ended?'<h2 class="sign" id="wn"></h2>':''}
     <div class="boxes" id="bx"></div></div>
     ${lob?'<div class="hside"><div id="qr"></div><p>Scan to join the hunt</p></div>':''}</div>
-  <p class="note">Players scan the QR and enter their group number. First to ${TOTAL} words ends the game. Ties go to who found their last word first.</p>`;
+  <p class="note"></p>`;
   hostBoxes();
   const q=$('#qr');if(q&&window.qrcode){try{const c=qrcode(0,'M');c.addData(location.href.split('#')[0]);c.make();q.innerHTML=c.createSvgTag(6,0)}catch(e){}}
   const st=$('#st');if(st){$('#du').onchange=e=>dur=+e.target.value;
