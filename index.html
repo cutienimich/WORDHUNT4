@@ -144,7 +144,7 @@ function renderJoin(){
   app.innerHTML=`${HEAD}
   <p style="margin-top:44px"><input class="inp pill" id="gn" inputmode="numeric" maxlength="1" placeholder="Enter your Group Number" aria-label="Group number"></p>
   <p style="margin-top:30px"><button class="btn go" id="sv">🧭 Save</button></p><p class="err" id="er">${err}</p>
-  <p>The game will start once the Host starts.</p><p class="note">Group numbers 1 to 6.</p>`;
+  <p>The game will start once the Host starts.</p><p class="note"></p>`;
   $('#sv').onclick=async()=>{const n=+$('#gn').value,er=$('#er');if(!(n>=1&&n<=6)){er.textContent='Enter a number from 1 to 6.';return}
     const g=groups['g'+n];
     if(game.status!=='lobby'&&!(g&&g.owner===DID)){er.textContent='Game already started. You can’t join now.';return}
@@ -202,7 +202,7 @@ function renderHost(){
     ${ended?'<h2 class="sign" id="wn"></h2>':''}
     <div class="boxes" id="bx"></div></div>
     ${lob?'<div class="hside"><div id="qr"></div><p>Scan to join the hunt</p></div>':''}</div>
-  <p class="note">Players scan the QR and enter their group number. First to ${TOTAL} words ends the game. Ties go to who found their last word first.</p>`;
+  <p class="note"></p>`;
   hostBoxes();
   $('#bx').onclick=async e=>{const b=e.target.closest('.kick');if(!b)return;const i=+b.dataset.k;
     if(kickArm!==i){kickArm=i;hostBoxes();setTimeout(()=>{if(kickArm===i){kickArm=0;hostBoxes()}},4000);return}
