@@ -44,6 +44,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:4px solid 
 #qr svg{display:block;width:170px;height:170px}
 .hostbadge{display:inline-block;background:var(--gr);color:#fff;border-radius:999px;padding:2px 14px;font-weight:700;font-size:14px;margin-top:4px}
 .note,.tag,.err{background:#f8e8c2d9;border-radius:12px;padding:4px 14px;display:inline-block}
+.err:empty{display:none}
 .hbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-start;min-height:44px}
 .tsel{background:#f8e8c2d9;border-radius:12px;padding:4px 10px;font-size:15px;font-weight:700}
 .tsel select{font:inherit;padding:2px 8px;border-radius:10px;border:3px solid var(--edge);background:var(--parch);color:var(--ink)}
@@ -95,7 +96,7 @@ const db=getDatabase(initializeApp(FIREBASE_CONFIG));
 let off=0,game={status:'lobby',epoch:0},groups={},me=+ls('wh_g')||null,mine=[],lastT=0,epoch=null,hostView=false,ph='',shownKey='',wipe=false,dur=300,err='';
 try{mine=JSON.parse(ls('wh_w')||'[]')}catch(e){mine=[]}
 lastT=+ls('wh_t')||0;epoch=ls('wh_e')==null?null:+ls('wh_e');
-const HEAD=`<div class="ribbon">Word Hunt</div><h1 class="sign big">🏴‍☠️ Treasure Hunt</h1><p class="tag">Find the words. Claim the treasure!</p>`;
+const HEAD=`<div class="sign hbanner"><span class="flag">☠️</span><span class="w1">WORD</span><span class="w2">Hunt</span></div>`;
 const now=()=>Date.now()+off;
 const fmt=ms=>{ms=Math.max(0,Math.ceil(ms/1000));return Math.floor(ms/60)+':'+String(ms%60).padStart(2,'0')};
 const left=()=>game.status==='running'?game.startAt+game.dur-now():0;
@@ -126,13 +127,13 @@ function render(){
 }
 window.addEventListener('hashchange',()=>{hostView=location.hash==='#host'&&ls('wh_hp')===HOST_PIN;shownKey='';sync()});
 function renderPin(){
-  app.innerHTML=`${HEAD}<span class="hostbadge">Host</span><p><input class="inp pill" id="pn" type="password" placeholder="Host PIN" aria-label="Host PIN"></p><p><button class="btn go" id="ok">Enter</button></p><p class="err" id="er"></p>`;
+  app.innerHTML=`${HEAD}<p style="margin-top:44px"><input class="inp pill" id="pn" type="password" placeholder="Host PIN" aria-label="Host PIN"></p><p><button class="btn go" id="ok">Enter</button></p><p class="err" id="er"></p>`;
   $('#ok').onclick=()=>{if($('#pn').value===HOST_PIN){ls('wh_hp',HOST_PIN);hostView=true;shownKey='';sync()}else $('#er').textContent='Wrong PIN.'};
 }
 function renderJoin(){
   app.innerHTML=`${HEAD}
-  <p><input class="inp pill" id="gn" inputmode="numeric" maxlength="1" placeholder="Enter your Group Number" aria-label="Group number"></p>
-  <p><button class="btn go" id="sv">🧭 Save</button></p><p class="err" id="er">${err}</p>
+  <p style="margin-top:44px"><input class="inp pill" id="gn" inputmode="numeric" maxlength="1" placeholder="Enter your Group Number" aria-label="Group number"></p>
+  <p style="margin-top:30px"><button class="btn go" id="sv">🧭 Save</button></p><p class="err" id="er">${err}</p>
   <p>The game will start once the Host starts.</p><p class="note">Group numbers 1 to 6.</p>`;
   $('#sv').onclick=async()=>{const n=+$('#gn').value;if(!(n>=1&&n<=6)){$('#er').textContent='Enter a number from 1 to 6.';return}
     if(ls('wh_g')!==String(n)){mine=[];lastT=0}
