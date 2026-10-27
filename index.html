@@ -74,7 +74,7 @@ const FIREBASE_CONFIG={
   projectId:"wordhunt-79a26",
   appId:"1:225475319753:web:d26baaee1c1354374cba18"
 };
-const HOST_PIN="4821";   /* change this. Host opens: your-site-url/#host */
+/* Host opens directly: your-site-url/#host (no PIN required). */
 /* ================================================== */
 
 const WORDS=['ORGANIZING','ORGANIZATION','AUTHORITY','STRUCTURE','NETWORK','MATRIX','STORAGE','SECURITY','DISTRIBUTION','ACCURACY','COORDINATION','SPECIALIZATION','FUNCTIONAL','DIVISIONAL','INFORMATION'];
@@ -121,25 +121,20 @@ onValue(ref(db,'groups'),s=>{groups=s.val()||{};gLoaded=true;chkMe();sync()},()=
 function fail(){app.innerHTML='<h1>Word Hunt</h1><p class="err">Cannot reach the game server. Check internet and Firebase rules.</p>'}
 setInterval(sync,1000);
 
-/* host unlock */
-hostView=location.hash==='#host'&&ls('wh_hp')===HOST_PIN;
+/* host access: open #host directly, without a PIN */
+hostView=location.hash==='#host';
 function sync(){
-  const p=phase(),key=(location.hash==='#host'&&!hostView?'pin':hostView?'h':me?'g'+me:'j')+p;
+  const p=phase(),key=(hostView?'h':me?'g'+me:'j')+p;
   if(key!==shownKey){shownKey=key;ph=p;render();return}
   const t=$('#tm');if(t)t.textContent=p==='run'?fmt(left())+' mins left':(p==='ended'?'Time’s up':'Waiting for host');
   if(hostView)hostBoxes();
 }
 function render(){
-  if(location.hash==='#host'&&!hostView)return renderPin();
   if(hostView)return renderHost();
   if(!me)return renderJoin();
   renderPlay();
 }
-window.addEventListener('hashchange',()=>{hostView=location.hash==='#host'&&ls('wh_hp')===HOST_PIN;shownKey='';sync()});
-function renderPin(){
-  app.innerHTML=`${HEAD}<p style="margin-top:44px"><input class="inp pill" id="pn" type="password" placeholder="Host PIN" aria-label="Host PIN"></p><p><button class="btn go" id="ok">Enter</button></p><p class="err" id="er"></p>`;
-  $('#ok').onclick=()=>{if($('#pn').value===HOST_PIN){ls('wh_hp',HOST_PIN);hostView=true;shownKey='';sync()}else $('#er').textContent='Wrong PIN.'};
-}
+window.addEventListener('hashchange',()=>{hostView=location.hash==='#host';shownKey='';sync()});
 function renderJoin(){
   app.innerHTML=`${HEAD}
   <p style="margin-top:44px"><input class="inp pill" id="gn" inputmode="numeric" maxlength="1" placeholder="Enter your Group Number" aria-label="Group number"></p>
